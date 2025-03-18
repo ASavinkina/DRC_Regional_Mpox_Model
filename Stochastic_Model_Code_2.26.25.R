@@ -3,7 +3,7 @@ library(ggplot2)
 library(adaptivetau)
 library(tidyverse)
 
-demog = read.csv("Data/Demographic_data_countries_2_27_25.csv")
+demog = read.csv("Data/Demographic_data_countries_3_18_25.csv")
 
 demog$location <- demog$Country
 demog$location <- ifelse(demog$Country=="DRC",demog$Province, demog$Country)
@@ -50,13 +50,13 @@ colnames(exog_shock) <- x
   
 for (i in 1:length(demog$location)) {
 
-  exog_shock[i,1] <- demog[i,17]
-  
+  exog_shock[i,1] <- demog[i,18]
+
 # this assumes that half of all sylvatic transmission happens in adults, and 1/4 each in children's age groups
-  exog_shock[i,2]= (((demog[i,20])*(1-prop_sylvatic_adult-prop_sylvatic_u15))/demog[i,4]) / 365
-  exog_shock[i,3]= (((demog[i,20])*prop_sylvatic_u15)/demog[i,5]) / 365
-  exog_shock[i,4]= ((((demog[i,20])*prop_sylvatic_adult)/demog[i,6])) / 365
-  exog_shock[i,5]= ((((demog[i,20])*prop_sylvatic_adult)/demog[i,6])) / 365
+  exog_shock[i,2]= (((demog[i,21])*(1-prop_sylvatic_adult-prop_sylvatic_u15))/demog[i,4]) / 365
+  exog_shock[i,3]= (((demog[i,21])*prop_sylvatic_u15)/demog[i,5]) / 365
+  exog_shock[i,4]= ((((demog[i,21])*prop_sylvatic_adult)/demog[i,6])) / 365
+  exog_shock[i,5]= ((((demog[i,21])*prop_sylvatic_adult)/demog[i,6])) / 365
 
   exog_shock[is.na(exog_shock)] <- 0
 
@@ -64,6 +64,10 @@ for (i in 1:length(demog$location)) {
 
 exog_shock_multi_1a <- 0.95
 exog_shock_multi_1b <- 0.05
+
+births <- demog[,c(17,18)]
+
+births$birth_rate <- births$birth_per_1000/1000/365
 
 
 recoveryrate=1/21
@@ -90,23 +94,21 @@ SA_u15 = 0.0803/4 # secondary attack rate when infected person is under 15, halv
 SA_o15 = 0.0133/2 # secondary attack rate when infected person is over 15, halved to account for data coming from household transmission
 SA_sex = 0.005 # secondary attack rate from sex, made up for now
 
-
+# Mpox mortality
 mortality_u5 = 0.10 # mortality rate under 5
 mortality_u15 = 0.08 # mortality rate under 15
 mortality_o15 = 0.035 # mortality rate over 15
 
 
-# exograte_u5 <- 
-# exograte_u15 <- 0
-# exograte_o15 <- 0
-# exograte_o15HR <- 0
-# exograte_o15LR <- 0
+
+
+
 
 params <- list(
   #beta = 0.3,       # Transmission rate
   rho = 1/21,      # Recovery rate
   mu = 1/50,        # Birth and natural death rate (assuming lifespan of 50 years)
-  aging = c(0,0),#c(1/5,1/10),#c(1/20, 1/30),  # Aging rates from young to adult and adult to senior
+  aging = c(1/(5*365),1/(10*365)),#c(1/20, 1/30),  # Aging rates from young to adult and adult to senior
   demog= demog,
   movement = movement,
   exog_shock = exog_shock,
@@ -156,7 +158,7 @@ params <- list(
 # Define parameters
 
 locations <- demog$location
-locations <- locations[1:4]
+locations <- locations[1:2]
 
 age_groups <- c("U5", "U15", "O15HR", "O15LR")
 
@@ -185,6 +187,8 @@ colnames(nu) <- names(y_init)
 for (c in 1:length(locations)) {
   for (b in 1:length(age_groups)) {
     
+
+    
     age<- age_groups[b]
     location <- locations[c]
   
@@ -195,6 +199,98 @@ for (c in 1:length(locations)) {
                 "+V_", age_groups[1], "_", location, "+ V_", age_groups[2], "_", location, "+V_", age_groups[3], "_", location, "+V_", age_groups[4], "_", location,
                 "+R_", age_groups[1], "_", location, "+ R_", age_groups[2], "_", location, "+R_", age_groups[3], "_", location, "+R_", age_groups[4], "_", location,")")
 
+    
+    # Births
+    
+    if (b==1) {
+      
+    reactions <- append(reactions, list(c(
+      #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+      paste0("births[births$location== '",location, "',", 3,"]* (S_O15LR","_", location, '+ S_O15HR','_', location, " +V_O15LR","_", location, '+ V_O15HR','_', location, " +R_O15LR","_", location, '+ R_O15HR','_', location,')'))))
+      
+    
+    new_row <- rep(0, length(y_init))
+    names(new_row) <- names(y_init)
+    new_row[match(paste0("S_", age, "_", location), names(y_init))] <- 1
+    nu <- rbind(nu, new_row)
+    
+    }
+    
+    # Natural deaths- only in adults for now, to balance births
+    # 
+    
+    if (b==3) {
+      
+      reactions <- append(reactions, list(c(
+        #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+        paste0("births[births$location== '",location, "',", 3,"]* (S_O15HR","_", location,')'))))
+      
+      
+      new_row <- rep(0, length(y_init))
+      names(new_row) <- names(y_init)
+      new_row[match(paste0("S_", age, "_", location), names(y_init))] <- -1
+      nu <- rbind(nu, new_row)
+      
+      
+      reactions <- append(reactions, list(c(
+        #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+        paste0("births[births$location== '",location, "',", 3,"]* (V_O15HR","_", location,')'))))
+      
+      
+      new_row <- rep(0, length(y_init))
+      names(new_row) <- names(y_init)
+      new_row[match(paste0("V_", age, "_", location), names(y_init))] <- -1
+      nu <- rbind(nu, new_row)
+
+      
+      reactions <- append(reactions, list(c(
+        #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+        paste0("births[births$location== '",location, "',", 3,"]* (R_O15HR","_", location,')'))))
+      
+      
+      new_row <- rep(0, length(y_init))
+      names(new_row) <- names(y_init)
+      new_row[match(paste0("R_", age, "_", location), names(y_init))] <- -1
+      nu <- rbind(nu, new_row)
+      
+    }
+    
+    if (b==4) {
+      
+      reactions <- append(reactions, list(c(
+        #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+        paste0("births[births$location== '",location, "',", 3,"]* (S_O15LR","_", location,')'))))
+      
+      
+      new_row <- rep(0, length(y_init))
+      names(new_row) <- names(y_init)
+      new_row[match(paste0("S_", age, "_", location), names(y_init))] <- -1
+      nu <- rbind(nu, new_row)
+      
+      
+      reactions <- append(reactions, list(c(
+        #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+        paste0("births[births$location== '",location, "',", 3,"]* (V_O15LR","_", location,')'))))
+      
+      
+      new_row <- rep(0, length(y_init))
+      names(new_row) <- names(y_init)
+      new_row[match(paste0("V_", age, "_", location), names(y_init))] <- -1
+      nu <- rbind(nu, new_row)
+      
+      
+      reactions <- append(reactions, list(c(
+        #paste0("S_", age, "_", location, " -> I_", age, "_", location),
+        paste0("births[births$location== '",location, "',", 3,"]* (R_O15LR","_", location,')'))))
+      
+      
+      new_row <- rep(0, length(y_init))
+      names(new_row) <- names(y_init)
+      new_row[match(paste0("R_", age, "_", location), names(y_init))] <- -1
+      nu <- rbind(nu, new_row)
+      
+    }
+    
     reactions <- append(reactions, list(c(
       #paste0("S_", age, "_", location, " -> I_", age, "_", location),
                                           paste0("(beta_",age,age_groups[1], "* S_", age, "_", location, " * Ia_", age_groups[1], "_", location, 
