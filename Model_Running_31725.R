@@ -8,7 +8,7 @@ source("Stochastic_Model_Code_2.26.25.R")
 n=10
 #set.seed(NULL)
 
-
+out <- ssa(y_init, reactions2, nu2, params, tf = 365, method=ssa.btl(f=10))
 # Run model N times and save output to a list
 
 out <- lapply(X=1:n,FUN=function(x) ssa(y_init, reactions2, nu2, params, tf = 365, method=ssa.btl(f=10))$data)

@@ -157,8 +157,10 @@ params <- list(
 
 # Define parameters
 
+demog2 <- demog[which(demog$Country == "DRC"|demog$Country == "Uganda"),]
+
 locations <- demog$location
-locations <- locations[1:2]
+
 
 age_groups <- c("U5", "U15", "O15HR", "O15LR")
 
