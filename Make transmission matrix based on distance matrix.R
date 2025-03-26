@@ -111,5 +111,31 @@ diag(transmission_movement_matrix) <- 0
 
 write.csv(transmission_movement_matrix, file="Data/transmission_movement_matrix_country.csv")
 
+# Core borders
+B0_core= 5.792
+B1_core = 105.7
+B2_core=0.186
+B3_core= 0
+
+
+
+transmission_movement_matrix[transmission_movement_matrix>0] <- 0
+
+for (i in 1:length(locations)) {
+  for (j in 1:length(locations)) {
+    
+    B3 <- ifelse(demog[i,"diff_country"]|demog[j,"diff_country"]==1,B3_count, 1 )
+    
+    transmission_movement_matrix[i,j] <- B3 * (1/ (1+ exp(B0_count + B1_count*((movement[i,j]/1000)/((demog[i,"pop"]*demog[j,"pop"])^B2_count)))))
+    
+    
+  }
+  
+}
+
+diag(transmission_movement_matrix) <- 0
+
+write.csv(transmission_movement_matrix, file="Data/transmission_movement_matrix_core_noB3.csv")
+
 
 
