@@ -29,12 +29,12 @@ rownames(movement) <- gsub(x = rownames(movement), pattern = "\\_", replacement 
 
 demog$location <-gsub(x = demog$location, pattern = "\\-", replacement = "")
 
-percHR <- 0.05
+#percHR <- 0.05
 
-propHR=percHR
+#propHR=percHR
 
-demog$O15HR <- demog$O15 * percHR
-demog$O15LR <- demog$O15 * (1-percHR)
+demog$O15HR <- demog$O15 * demog$percHR
+demog$O15LR <- demog$O15 * (1-demog$percHR)
 
 
 # Take average of cases from 2021 and 2022 (pre-epidemic) to estimate number of sylvatic infections
@@ -51,7 +51,7 @@ colnames(exog_shock) <- x
 
 for (i in 1:length(demog$location)) {
   
-  exog_shock[i,1] <- demog[i,18]
+  exog_shock[i,1] <- demog[i,19]
   
   # this assumes that half of all sylvatic transmission happens in adults, and 1/4 each in children's age groups
   exog_shock[i,2]= (((demog[i,21])*(1-prop_sylvatic_adult-prop_sylvatic_u15))/demog[i,4]) / 365
